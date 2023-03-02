@@ -1,6 +1,7 @@
 # weather
-steps to modify
-suppose working directory(WD) is /home/WRF
+suppose working directory(WD) is /home/WRF \
+
+
 
 1)edit ~/anaconda3/lib/python3.7/my_infer_module.py \
 2) edit build.py, phython ./build.py, will have libplugin.so \
