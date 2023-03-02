@@ -19,12 +19,12 @@ all three dimensional variables are stored (ims:ime,kms:kme,jms:jme)\
 
 
 
-script to plot mskf_0120.npz
+script to plot mskf_0120.npz \
 
-import numpy as np
-import matplotlib.pyplot as plt
-plt.style.use('seaborn-whitegrid')
-data = np.load('mskf_0120.npz')
-print(np.max(data['dt'][:,13,:]))
-plt.contour(data['u'][:,10,:],cmap='RdGy');
-plt.show() 
+import numpy as np\
+import matplotlib.pyplot as plt\
+plt.style.use('seaborn-whitegrid')\
+data = np.load('mskf_0120.npz')\
+print(np.max(data['dt'][:,13,:]))\
+plt.contour(data['u'][:,10,:],cmap='RdGy');\
+plt.show() \
