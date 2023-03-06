@@ -3,26 +3,17 @@ MODULE module_cumulus_python_data
     implicit none
     save
     interface
-      subroutine hello_world() bind(c)
-      end subroutine hello_world
-       subroutine save_fortran_array2(data_array,in_x,in_y,filename) bind(c)
+
+       subroutine save_mskf(u,v,w,t,q,p,dt,dqv,dqc,dqr,dqi,dqs,rain,in_x,in_y,in_xy,in_z,filename) bind(c)
          use,intrinsic   :: iso_c_binding
          implicit none
-         integer(c_int),value  :: in_x
-         integer(c_int),value  :: in_y
-         REAL(c_float), DIMENSION( in_x, in_y ), INTENT(IN)  :: data_array
+         integer(c_int),value  :: in_xy,in_z,in_x,in_y
+         REAL(c_float), DIMENSION( in_z,in_xy ), INTENT(IN)  :: u,v,w,t,q,p
+         REAL(c_float), DIMENSION( in_z,in_xy ), INTENT(IN)  :: dt,dqv,dqc,dqr,dqi,dqs
+         REAL(c_float), DIMENSION( 1,in_xy    ), INTENT(IN)  :: rain
          CHARACTER(c_char), DIMENSION(*) :: filename
-
-       end subroutine save_fortran_array2
-       subroutine save_mskf(u,v,w,t,q,p,dt,dqv,dqc,dqr,dqi,dqs,in_x,in_y,in_z,filename) bind(c)
-         use,intrinsic   :: iso_c_binding
-         implicit none
-         integer(c_int),value  :: in_x,in_y,in_z
-         REAL(c_float), DIMENSION( in_x,in_z, in_y ), INTENT(IN)  :: u,v,w,t,q,p
-         REAL(c_float), DIMENSION( in_x,in_z, in_y ), INTENT(IN)  :: dt,dqv,dqc,dqr,dqi,dqs
-         CHARACTER(c_char), DIMENSION(*) :: filename
-
        end subroutine save_mskf
+
     end interface
 END MODULE module_cumulus_python_data
 
@@ -420,6 +411,18 @@ CONTAINS
    
 
 
+ !yux
+   REAL, DIMENSION( ids:ide-1, jds:jde-1, kds:kde-1 )   ::                &
+         u_3d,v_3d,w_3d,t_3d,q_3d,p_3d,dtt_3d,dqv_3d,dqc_3d,dqr_3d,dqi_3d,dqs_3d
+   REAL, DIMENSION( ids:ide-1, jds:jde-1 )    ::                        &
+           rainc_2d 
+   integer                                              :: mij
+   REAL, DIMENSION( kds:kde-1,(ide-1)*(jde-1)  )   ::                &
+         u_2d,v_2d,w_2d,t_2d,q_2d,p_2d,dtt_2d,dqv_2d,dqc_2d,dqr_2d,dqi_2d,dqs_2d
+   REAL, DIMENSION(1, (ide-1)*(jde-1) )    ::                        &
+           rainc_1d 
+   ! yux
+
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                 &
          INTENT(IN ) ::                                          &
                                                               z  &
@@ -705,6 +708,8 @@ CONTAINS
    REAL, INTENT(IN)    :: JULIAN        
    INTEGER, INTENT(IN) :: id 
    INTEGER, INTENT(IN) :: JULDAY
+
+
 
 
     pattern_spp_conv=0.
@@ -1059,7 +1064,54 @@ CALL HALO_CUP_G3_IN_sub ( grid, &
        write(cmin,'(i4.4)')int(itimestep*dt/60.)
        filename="mskf_"//cmin//".npz"
        write(*,*)"yux start to save mskf"
-       call save_mskf(u,v,w,t,qv_curr,p,rthcuten,rqvcuten,rqccuten,rqrcuten,rqicuten,rqscuten,ime-ims+1,jme-jms+1,kme-kms+1,trim(filename))
+       write(*,'(12i6)')ids,ide,jds,jde,kds,kde &
+                ,ims,ime,jms,jme,kms,kme 
+       write(*,*)i_start,i_end,j_start,j_end
+       
+!       do k=1,kde-1
+        do k=1,kde-1
+        mij=1
+        do i=i_start(1),i_end(1)
+          do j=j_start(1),j_end(1)
+        u_3d(i,j,k)=u(i,k,j)
+        v_3d(i,j,k)=v(i,k,j)
+        w_3d(i,j,k)=w(i,k,j)
+        t_3d(i,j,k)=t(i,k,j)
+        q_3d(i,j,k)=qv_curr(i,k,j)
+        p_3d(i,j,k)=p(i,k,j)
+
+        dtt_3d(i,j,k)=rthcuten(i,k,j)
+        dqv_3d(i,j,k)=rqvcuten(i,k,j)
+        dqc_3d(i,j,k)=rqccuten(i,k,j)
+        dqr_3d(i,j,k)=rqrcuten(i,k,j)
+        dqi_3d(i,j,k)=rqicuten(i,k,j)
+        dqs_3d(i,j,k)=rqscuten(i,k,j)
+
+        if(k.eq.1)then
+             rainc_1d(k,mij)=raincv(i,j)
+        endif
+        u_2d(k,mij)=u(i,k,j)
+        v_2d(k,mij)=v(i,k,j)
+        w_2d(k,mij)=w(i,k,j)
+        t_2d(k,mij)=t(i,k,j)
+        q_2d(k,mij)=qv_curr(i,k,j)
+        p_2d(k,mij)=p(i,k,j)
+
+        dtt_2d(k,mij)=rthcuten(i,k,j)
+        dqv_2d(k,mij)=rqvcuten(i,k,j)
+        dqc_2d(k,mij)=rqccuten(i,k,j)
+        dqr_2d(k,mij)=rqrcuten(i,k,j)
+        dqi_2d(k,mij)=rqicuten(i,k,j)
+        dqs_2d(k,mij)=rqscuten(i,k,j)
+
+        if(k.eq.10)then
+         write(*,'(3i5,2f9.3)')i,j,mij,u_2d(k,mij),q_2d(k,mij)*1000.
+        endif
+        mij=mij+1
+          enddo
+         enddo
+        enddo
+        call save_mskf(u_2d,v_2d,w_2d,t_2d,q_2d,p_2d,dtt_2d,dqv_2d,dqc_2d,dqr_2d,dqi_2d,dqs_2d,rainc_1d,ide-1,jde-1,(ide-1)*(jde-1),kde-1,trim(filename))
        endif
  
      CASE (GDSCHEME)
