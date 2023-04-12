@@ -1,30 +1,50 @@
-# weather
-suppose working directory(WD) is /home/WRF \
+import numpy as np
+import netCDF4
+import matplotlib.pyplot as plt
+import xarray as xr
+from netCDF4 import Dataset
+from wrf import getvar, ALL_TIMES, interplevel
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature# ### 使用 cat 方法合并多个文件
 
 
 
-1)edit ~/anaconda3/lib/python3.7/my_infer_module.py \
-2) edit build.py, phython ./build.py, will have libplugin.so \
-3）compile WRFV4.3 (select option 34) as usual, and rename WRFV4\
-4) copy WRFV4/phys/module_cumulus_driver.f90 and changed\
-5）copy main/wrf.o main/libwrf.a WD/.,  to recompile.bash, linking -lplugin \
-6)copy ./wrf.exe to WRFV4/test/em_real\
-7)edit namelist.input, cu_physis=11\
-8)mpirun -np 1 ./wrf.exe 
 
-will get mskf_0030.npz, mskf_0060.npz..\
-output are saved every 30 minutes.\
-npz file include (u,v,w,t,q,p,dt,dqv,dqc,dqr,dqi,dqs)\
-all three dimensional variables are stored (ims:ime,kms:kme,jms:jme)\
+wrfin = Dataset('./wrfout_d01_2022-05-20_12_20_00')
+# print(wrfin)
+# 提取位势高度和压力场
+z = getvar(wrfin, 'z')  # 提取WRF netCDF 变量 # model height
+p = getvar(wrfin, 'pressure')    # 单位hPa (29, 216, 216)
+q = 1000.*getvar(wrfin, 'QVAPOR')    # 单位hPa (29, 216, 216)
+qn=np.array(q)
+RTHCUTEN = getvar(wrfin,'RTHCUTEN')
+wo_dtt = np.array(RTHCUTEN*86400)
+print(RTHCUTEN.shape)
+plt.style.use('seaborn-whitegrid')
+data = np.load('mskf_0020.npz')
+print(data.files)
+nx=data['nx']
+ny=data['ny']
+nz=data['nz']
+
+print(data['dtt'][:,:].shape)
+dtt=data['dtt'].reshape((nx,ny,nz),order='c')*86400
+unpz=data['u'].reshape((nx,ny,nz),order='c')
+qnpz=1000.*data['q'].reshape((nx,ny,nz),order='c')
+qt=1000.*data['q'].reshape((nx,ny,nz),order='c')
 
 
-
-script to plot mskf_0120.npz \
-
-import numpy as np\
-import matplotlib.pyplot as plt\
-plt.style.use('seaborn-whitegrid')\
-data = np.load('mskf_0120.npz')\
-print(np.max(data['dt'][:,13,:]))\
-plt.contour(data['u'][:,10,:],cmap='RdGy');\
-plt.show() \
+print(unpz.shape)
+#print(unpz[0,21,22])
+#print(u[22,21,0])
+plt.pcolor(dtt[:,:,10].T,cmap='RdGy')
+plt.show()
+plt.pcolor(wo_dtt[10,:,:],cmap='RdGy')
+plt.show()
+plt.pcolor(qt[:,:,0].T,cmap='RdGy')
+plt.show()
+for i in range(0,219):
+    #print(max(qn[0,:,i]-qnpz[i,:,0]),max(wo_dtt[10,:,i]-dtt[i,:,10]))
+    for j in range(0,199):
+        if(wo_dtt[10,j,i] > 0.0001):
+            print(wo_dtt[10,j,i],dtt[i,j,10],wo_dtt[10,j,i]-dtt[i,j,10])
